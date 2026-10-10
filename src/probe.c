@@ -24,6 +24,7 @@
  */
 
 #include <pico/stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -171,12 +172,58 @@ void probe_init() {
 void probe_deinit(void)
 {
   if (probe.initted) {
-    probe_read_mode();
+    if (is_swd_mode)
+        probe_read_mode();
     pio_sm_set_enabled(pio0, PROBE_SM, 0);
-    pio_remove_program(pio0, &probe_program, probe.offset);
+    if (is_swd_mode)
+        pio_remove_program(pio0, &probe_program, probe.offset);
+    else
+        pio_remove_program(pio0, &probe_jtag_program, probe.offset);
 
     probe_assert_reset(1);	// de-assert nRESET
-    probe_gpio_deinit();
+    if (is_swd_mode)
+        probe_gpio_deinit();
+    else
+        probe_jtag_gpio_deinit();
     probe.initted = 0;
   }
+}
+
+void probe_jtag_init()
+{
+    if (!probe.initted) {
+        probe_jtag_gpio_init();
+        uint offset = pio_add_program(pio0, &probe_jtag_program);
+        probe.offset = offset;
+
+        pio_sm_config sm_config = probe_jtag_program_get_default_config(offset);
+        probe_jtag_sm_init(&sm_config);
+        pio_sm_init(pio0, PROBE_SM, offset, &sm_config);
+
+        // Set up divisor
+        probe_set_swclk_freq(1000);
+
+        pio_sm_set_enabled(pio0, PROBE_SM, 1);
+
+        pio_sm_set_consecutive_pindirs(pio0, PROBE_SM, PROBE_PIN_SWCLK, 1, true);
+        pio_sm_set_consecutive_pindirs(pio0, PROBE_SM, PROBE_PIN_TDI, 1, true);
+        pio_sm_set_consecutive_pindirs(pio0, PROBE_SM, PROBE_PIN_TDO, 1, false);
+
+        pio_sm_set_pins_with_mask(pio0, PROBE_SM, 1, 1u << PROBE_PIN_SWCLK);
+
+        probe.initted = 1;
+    }
+}
+
+uint32_t probe_jtag_write_and_read_bits(uint8_t tms, uint bit_count, uint32_t data_byte) {
+    gpio_put(PROBE_PIN_SWDIO, !!tms);
+    pio_sm_put_blocking(pio0, PROBE_SM, bit_count - 1);
+    pio_sm_put_blocking(pio0, PROBE_SM, data_byte);
+    uint32_t data = pio_sm_get_blocking(pio0, PROBE_SM);
+    uint32_t data_shifted = data;
+    if (bit_count < 32) {
+        data_shifted = data >> (32 - bit_count);
+    }
+    probe_dump("Jtag write and read %d bits 0x%x\n", bit_count, data_byte);
+    return data_shifted;
 }

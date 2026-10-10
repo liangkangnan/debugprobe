@@ -40,22 +40,40 @@ volatile uint32_t cached_delay = 0;
 //   return: none
 #if ((DAP_SWD != 0) || (DAP_JTAG != 0))
 void SWJ_Sequence (uint32_t count, const uint8_t *data) {
-  uint32_t bits;
-  uint32_t n;
-
   if (DAP_Data.clock_delay != cached_delay) {
     probe_set_swclk_freq(MAKE_KHZ(DAP_Data.clock_delay));
     cached_delay = DAP_Data.clock_delay;
   }
-  probe_debug("SWJ sequence count = %d FDB=0x%2x\n", count, data[0]);
-  n = count;
-  while (n > 0) {
-    if (n > 8)
-      bits = 8;
-    else
-      bits = n;
-    probe_write_bits(bits, *data++);
-    n -= bits;
+
+  if (is_swd_mode == 1) {
+    uint32_t bits;
+    uint32_t n;
+
+    probe_debug("SWJ sequence count = %d FDB=0x%2x\n", count, data[0]);
+    n = count;
+    while (n > 0) {
+      if (n > 8)
+        bits = 8;
+      else
+        bits = n;
+      probe_write_bits(bits, *data++);
+      n -= bits;
+    }
+  } else {
+    uint32_t val;
+    uint32_t n;
+
+    val = 0U;
+    n = 0U;
+    while (count--) {
+      if (n == 0U) {
+        val = *data++;
+        n = 8U;
+      }
+      probe_jtag_write_and_read_bits(val & 1U, 1, 0x00);
+      val >>= 1;
+      n--;
+    }
   }
 }
 #endif

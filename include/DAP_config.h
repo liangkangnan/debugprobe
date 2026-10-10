@@ -71,7 +71,11 @@ This information includes:
 
 /// Indicate that JTAG communication mode is available at the Debug Port.
 /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
+#ifdef DEBUG_ON_BLUEPROBE
+#define DAP_JTAG                1               ///< JTAG Mode: 1 = available, 0 = not available.
+#else
 #define DAP_JTAG                0               ///< JTAG Mode: 1 = available, 0 = not available.
+#endif
 
 /// Configure maximum number of JTAG devices on the scan chain connected to the Debug Access Port.
 /// This setting impacts the RAM requirements of the Debug Unit. Valid range is 1 .. 255.
@@ -298,7 +302,7 @@ of the same I/O port. The following SWDIO I/O Pin functions are provided:
  - \ref PIN_SWDIO_IN to read from the SWDIO I/O pin with utmost possible speed.
  - \ref PIN_SWDIO_OUT to write to the SWDIO I/O pin with utmost possible speed.
 */
-
+extern volatile uint32_t cached_delay;
 
 // Configure DAP I/O pins ------------------------------
 
@@ -308,7 +312,12 @@ Configures the DAP Hardware I/O pins for JTAG mode:
  - TDO to input mode.
 */
 __STATIC_INLINE void PORT_JTAG_SETUP (void) {
-  ;
+#if DAP_JTAG == 1
+  probe_deinit();
+  probe_jtag_init();
+  cached_delay = 0;
+  is_swd_mode = 0;
+#endif
 }
 
 /** Setup SWD I/O pins: SWCLK, SWDIO, and nRESET.
@@ -317,10 +326,11 @@ Configures the DAP Hardware I/O pins for Serial Wire Debug (SWD) mode:
  - TDI, nTRST to HighZ mode (pins are unused in SWD mode).
 */
 // hack - zap our "stop doing divides everywhere" cache
-extern volatile uint32_t cached_delay;
 __STATIC_INLINE void PORT_SWD_SETUP (void) {
+  probe_deinit();
   probe_init();
   cached_delay = 0;
+  is_swd_mode = 1;
 }
 
 /** Disable JTAG/SWD I/O Pins.
@@ -330,7 +340,6 @@ Disables the DAP Hardware I/O pins which configures:
 __STATIC_INLINE void PORT_OFF (void) {
   probe_deinit();
 }
-
 
 // SWCLK/TCK I/O pin -------------------------------------
 
@@ -398,7 +407,8 @@ Configure the SWDIO DAP hardware I/O pin to output mode. This function is
 called prior \ref PIN_SWDIO_OUT function calls.
 */
 __STATIC_FORCEINLINE void     PIN_SWDIO_OUT_ENABLE  (void) {
-  probe_write_mode();
+  if (is_swd_mode == 1)
+    probe_write_mode();
 }
 
 /** SWDIO I/O pin: Switch to Input mode (used in SWD mode only).
@@ -406,7 +416,8 @@ Configure the SWDIO DAP hardware I/O pin to input mode. This function is
 called prior \ref PIN_SWDIO_IN function calls.
 */
 __STATIC_FORCEINLINE void     PIN_SWDIO_OUT_DISABLE (void) {
-  probe_read_mode();
+  if (is_swd_mode == 1)
+    probe_read_mode();
 }
 
 
@@ -563,6 +574,7 @@ Status LEDs. In detail the operation of Hardware I/O and LED pins are enabled an
 */
 __STATIC_INLINE void DAP_SETUP (void) {
 // We synchronously setup probe IOs when the respective PIO program is loaded - not at start of day
+    is_swd_mode = 1;
 
 #ifdef PROBE_DAP_CONNECTED_LED
     gpio_init(PROBE_DAP_CONNECTED_LED);

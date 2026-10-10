@@ -46,6 +46,7 @@ target_compile_options(debugprobe PRIVATE -Wall)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_oen.pio)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/autobaud.pio)
+pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_jtag.pio)
 
 target_include_directories(debugprobe PRIVATE src)
 
@@ -77,6 +78,21 @@ if (DEBUG_ON_PICO)
     elseif (PICO_BOARD STREQUAL "pico2")
         set_target_properties(debugprobe PROPERTIES
             OUTPUT_NAME "debugprobe_on_pico2"
+        )
+    else ()
+        message(SEND_ERROR "Unsupported board ${PICO_BOARD}")
+    endif ()
+elseif (DEBUG_ON_BLUEPROBE)
+    target_compile_definitions (debugprobe PRIVATE
+    DEBUG_ON_BLUEPROBE=1
+    )
+    if (PICO_BOARD STREQUAL "pico")
+        set_target_properties(debugprobe PROPERTIES
+            OUTPUT_NAME "blueprobe_on_pico"
+        )
+    elseif (PICO_BOARD STREQUAL "pico2")
+        set_target_properties(debugprobe PROPERTIES
+            OUTPUT_NAME "blueprobe_on_pico2"
         )
     else ()
         message(SEND_ERROR "Unsupported board ${PICO_BOARD}")

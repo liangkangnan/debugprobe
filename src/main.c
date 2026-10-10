@@ -47,6 +47,8 @@
 #include "DAP.h"
 #include "hardware/structs/usb.h"
 
+uint8_t is_swd_mode;
+
 // UART0 for debugprobe debug
 // UART1 for debugprobe to target device
 

@@ -27,7 +27,7 @@
 
 #include "DAP_config.h"
 #include "DAP.h"
-
+#include <stdint.h>
 
 // JTAG Macros
 
@@ -75,6 +75,7 @@
 //   tdi:    pointer to TDI generated data
 //   tdo:    pointer to TDO captured data
 //   return: none
+/*
 void JTAG_Sequence (uint32_t info, const uint8_t *tdi, uint8_t *tdo) {
   uint32_t i_val;
   uint32_t o_val;
@@ -105,6 +106,45 @@ void JTAG_Sequence (uint32_t info, const uint8_t *tdi, uint8_t *tdo) {
     if (info & JTAG_SEQUENCE_TDO) {
       *tdo++ = (uint8_t)o_val;
     }
+  }
+}
+*/
+
+void JTAG_Sequence (uint32_t info, const uint8_t *tdi, uint8_t *tdo) {
+  uint32_t i_val;
+  uint32_t o_val;
+  uint32_t n, k;
+  uint8_t tms;
+  uint8_t read;
+
+  n = info & JTAG_SEQUENCE_TCK;
+  if (n == 0U) {
+    n = 64U;
+  }
+
+  if (info & JTAG_SEQUENCE_TMS) {
+    tms = 1;
+  } else {
+    tms = 0;
+  }
+
+  if (info & JTAG_SEQUENCE_TDO) {
+    read = 1;
+  } else {
+    read = 0;
+  }
+
+  while (n) {
+    i_val = *tdi++;
+    if (n > 8)
+      k = 8;
+    else
+      k = n;
+    o_val = probe_jtag_write_and_read_bits(tms, k, i_val);
+    if (read) {
+      *tdo++ = (uint8_t)o_val;
+    }
+    n -= k;
   }
 }
 

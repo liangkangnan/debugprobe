@@ -65,10 +65,14 @@ do { \
 
 // TODO tie this up with PICO_BOARD defines in the main SDK
 
-#ifdef DEBUG_ON_PICO 
-#include "board_pico_config.h"
+#ifdef DEBUG_ON_PICO
+ #include "board_pico_config.h"
 #else
-#include "board_debug_probe_config.h"
+ #ifdef DEBUG_ON_BLUEPROBE
+  #include "board_blue_probe_config.h"
+ #else
+  #include "board_debug_probe_config.h"
+ #endif
 #endif
 //#include "board_example_config.h"
 

@@ -28,6 +28,7 @@
 
 #if defined(PROBE_IO_RAW) || defined(PROBE_IO_SWDI)
 #include "probe.pio.h"
+#include "probe_jtag.pio.h"
 #endif
 
 #if defined(PROBE_IO_OEN)
@@ -49,4 +50,8 @@ void probe_deinit(void);
 void probe_assert_reset(bool state);
 int probe_reset_level(void);
 
+extern uint8_t is_swd_mode;
+
+void probe_jtag_init();
+uint32_t probe_jtag_write_and_read_bits(uint8_t tms, uint bit_count, uint32_t data_byte);
 #endif
