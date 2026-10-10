@@ -77,3 +77,14 @@ To enable AutoBaud, configure the USB CDC port to the following custom baud rate
 
 Changing the baud rate to any other value disables AutoBaud.
 
+# Add by me
+
+编译blueprobe版本固件：
+
+```
+mkdir build
+cd build
+cmake -DDEBUG_ON_BLUEPROBE=1 -DPICO_BOARD=pico2 ..
+make
+```
+
