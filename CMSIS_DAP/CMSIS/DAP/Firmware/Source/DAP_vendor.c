@@ -61,7 +61,12 @@ uint32_t DAP_ProcessVendorCommand(const uint8_t *request, uint8_t *response) {
 #endif
       break;
 
-    case ID_DAP_Vendor1:  break;
+    case ID_DAP_Vendor1:
+      DAP_Data.debug_port = DAP_PORT_JTAG;
+      PORT_CJTAG_SETUP();
+      *response++ = 0x01;
+      num++;
+      break;
     case ID_DAP_Vendor2:  break;
     case ID_DAP_Vendor3:  break;
     case ID_DAP_Vendor4:  break;

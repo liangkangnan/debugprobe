@@ -172,19 +172,25 @@ void probe_init() {
 void probe_deinit(void)
 {
   if (probe.initted) {
-    if (is_swd_mode)
+    if (transport_mode == TRANSPORT_SWD)
         probe_read_mode();
+
     pio_sm_set_enabled(pio0, PROBE_SM, 0);
-    if (is_swd_mode)
+
+    if (transport_mode == TRANSPORT_SWD)
         pio_remove_program(pio0, &probe_program, probe.offset);
-    else
+    else if (transport_mode == TRANSPORT_JTAG)
         pio_remove_program(pio0, &probe_jtag_program, probe.offset);
+    else
+        pio_remove_program(pio0, &probe_cjtag_program, probe.offset);
 
     probe_assert_reset(1);	// de-assert nRESET
-    if (is_swd_mode)
+    if (transport_mode == TRANSPORT_SWD)
         probe_gpio_deinit();
-    else
+    else if (transport_mode == TRANSPORT_JTAG)
         probe_jtag_gpio_deinit();
+    else
+        probe_cjtag_gpio_deinit();
     probe.initted = 0;
   }
 }
@@ -225,5 +231,62 @@ uint32_t probe_jtag_write_and_read_bits(uint8_t tms, uint bit_count, uint32_t da
         data_shifted = data >> (32 - bit_count);
     }
     probe_dump("Jtag write and read %d bits 0x%x\n", bit_count, data_byte);
+    return data_shifted;
+}
+
+void probe_cjtag_init()
+{
+    if (!probe.initted) {
+        probe_cjtag_gpio_init();
+        uint offset = pio_add_program(pio0, &probe_cjtag_program);
+        probe.offset = offset;
+
+        pio_sm_config sm_config = probe_cjtag_program_get_default_config(offset);
+        probe_cjtag_sm_init(&sm_config);
+        pio_sm_init(pio0, PROBE_SM, offset, &sm_config);
+
+        // Set up divisor
+        probe_set_swclk_freq(1000);
+
+        pio_sm_set_enabled(pio0, PROBE_SM, 1);
+
+        pio_sm_set_consecutive_pindirs(pio0, PROBE_SM, PROBE_PIN_SWCLK, 1, true);
+        pio_sm_set_consecutive_pindirs(pio0, PROBE_SM, PROBE_PIN_SWDIO, 1, true);
+
+        pio_sm_set_pins_with_mask(pio0, PROBE_SM, 0, 1u << PROBE_PIN_SWCLK);
+        pio_sm_set_pins_with_mask(pio0, PROBE_SM, 0, 1u << PROBE_PIN_SWDIO);
+
+        probe.initted = 1;
+    }
+}
+
+uint32_t probe_cjtag_write_and_read_bits(uint8_t tms, uint bit_count, uint32_t data_byte) {
+    uint32_t i;
+    uint32_t new_data = 0;
+    uint32_t index = 0;
+
+    tms = !!tms;
+    for (i = 0; i < bit_count; i++) {
+        if (data_byte & 0x1) {
+            // ~TDI
+            new_data |= 0x0 << index;
+        } else {
+            // ~TDI
+            new_data |= 0x1 << index;
+        }
+        index++;
+        new_data |= tms << index;
+        index++;
+        data_byte = data_byte >> 1;
+    }
+
+    pio_sm_put_blocking(pio0, PROBE_SM, bit_count - 1);
+    pio_sm_put_blocking(pio0, PROBE_SM, new_data);
+    uint32_t data = pio_sm_get_blocking(pio0, PROBE_SM);
+    uint32_t data_shifted = data;
+    if (bit_count < 32) {
+        data_shifted = data >> (32 - bit_count);
+    }
+    probe_dump("cJtag write and read %d bits 0x%x\n", bit_count, new_data);
     return data_shifted;
 }

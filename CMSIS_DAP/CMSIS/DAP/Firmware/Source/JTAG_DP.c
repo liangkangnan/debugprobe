@@ -140,14 +140,16 @@ void JTAG_Sequence (uint32_t info, const uint8_t *tdi, uint8_t *tdo) {
       k = 8;
     else
       k = n;
-    o_val = probe_jtag_write_and_read_bits(tms, k, i_val);
+    if (transport_mode == TRANSPORT_JTAG)
+      o_val = probe_jtag_write_and_read_bits(tms, k, i_val);
+    else
+      o_val = probe_cjtag_write_and_read_bits(tms, k, i_val);
     if (read) {
       *tdo++ = (uint8_t)o_val;
     }
     n -= k;
   }
 }
-
 
 // JTAG Set IR
 //   ir:     IR value

@@ -45,7 +45,7 @@ void SWJ_Sequence (uint32_t count, const uint8_t *data) {
     cached_delay = DAP_Data.clock_delay;
   }
 
-  if (is_swd_mode == 1) {
+  if (transport_mode == TRANSPORT_SWD) {
     uint32_t bits;
     uint32_t n;
 
@@ -70,7 +70,10 @@ void SWJ_Sequence (uint32_t count, const uint8_t *data) {
         val = *data++;
         n = 8U;
       }
-      probe_jtag_write_and_read_bits(val & 1U, 1, 0x00);
+      if (transport_mode == TRANSPORT_JTAG)
+        probe_jtag_write_and_read_bits(val & 1U, 1, 0x00);
+      else
+        probe_cjtag_write_and_read_bits(val & 1U, 1, 0xff);
       val >>= 1;
       n--;
     }

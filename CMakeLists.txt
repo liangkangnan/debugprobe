@@ -47,6 +47,7 @@ pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_oen.pio)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/autobaud.pio)
 pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_jtag.pio)
+pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_cjtag.pio)
 
 target_include_directories(debugprobe PRIVATE src)
 

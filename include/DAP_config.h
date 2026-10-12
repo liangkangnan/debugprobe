@@ -315,8 +315,17 @@ __STATIC_INLINE void PORT_JTAG_SETUP (void) {
 #if DAP_JTAG == 1
   probe_deinit();
   probe_jtag_init();
+  transport_mode = TRANSPORT_JTAG;
   cached_delay = 0;
-  is_swd_mode = 0;
+#endif
+}
+
+__STATIC_INLINE void PORT_CJTAG_SETUP (void) {
+#if DAP_JTAG == 1
+  probe_deinit();
+  probe_cjtag_init();
+  transport_mode = TRANSPORT_CJTAG;
+  cached_delay = 0;
 #endif
 }
 
@@ -330,7 +339,7 @@ __STATIC_INLINE void PORT_SWD_SETUP (void) {
   probe_deinit();
   probe_init();
   cached_delay = 0;
-  is_swd_mode = 1;
+  transport_mode = TRANSPORT_SWD;
 }
 
 /** Disable JTAG/SWD I/O Pins.
@@ -407,7 +416,7 @@ Configure the SWDIO DAP hardware I/O pin to output mode. This function is
 called prior \ref PIN_SWDIO_OUT function calls.
 */
 __STATIC_FORCEINLINE void     PIN_SWDIO_OUT_ENABLE  (void) {
-  if (is_swd_mode == 1)
+  if (transport_mode == TRANSPORT_SWD)
     probe_write_mode();
 }
 
@@ -416,7 +425,7 @@ Configure the SWDIO DAP hardware I/O pin to input mode. This function is
 called prior \ref PIN_SWDIO_IN function calls.
 */
 __STATIC_FORCEINLINE void     PIN_SWDIO_OUT_DISABLE (void) {
-  if (is_swd_mode == 1)
+  if (transport_mode == TRANSPORT_SWD)
     probe_read_mode();
 }
 
@@ -574,7 +583,7 @@ Status LEDs. In detail the operation of Hardware I/O and LED pins are enabled an
 */
 __STATIC_INLINE void DAP_SETUP (void) {
 // We synchronously setup probe IOs when the respective PIO program is loaded - not at start of day
-    is_swd_mode = 1;
+  transport_mode = TRANSPORT_SWD;
 
 #ifdef PROBE_DAP_CONNECTED_LED
     gpio_init(PROBE_DAP_CONNECTED_LED);
