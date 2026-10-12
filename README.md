@@ -88,3 +88,20 @@ cmake -DDEBUG_ON_BLUEPROBE=1 -DPICO_BOARD=pico2 ..
 make
 ```
 
+搭配以下openocd，可以支持cJTAG模式：
+
+```
+https://github.com/liangkangnan/riscv-openocd.git
+```
+
+打开cJTAG模式，在openocd的cfg文件里配置：
+
+```
+adapter driver cmsis-dap
+transport select jtag
+adapter speed 1000
+
+cmsis-dap cjtag_mode on
+...
+```
+
